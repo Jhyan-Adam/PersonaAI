@@ -2,13 +2,11 @@ import ChatReader as cr
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
-# import pandas as pd
 
 class AITraining:
     
-    def __init__(self):
-        self.checkpoint_path = './chatCheckpoints/cp.ckpt'
-        (self.x_train, self.y_train) = (cr.ChatReader().chatCrawler(cr.ChatReader().chat))
+    checkpoint_path = './chatCheckpoints/cp.ckpt'
+    (x_train, y_train) = (cr.chatCrawler(cr.chat))
 
     def createModel(self):
         model = tf.keras.models.Sequential([  
