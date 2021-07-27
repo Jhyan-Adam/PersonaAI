@@ -188,4 +188,4 @@ obj = ChatReader() #DEBUGGING
 print(obj.chatCrawler(obj.chat)) #DEBUGGING
 
 #TODO make a dictionary for bag of words but don't use just words and counts; use tf-idf weightings and the "words" must be bigram tokens.
-#Create a dictionary generation algorithm to automatically generate one for a given chat with each new bigram. test
+#Create a dictionary generation algorithm to automatically generate one for a given chat with each new bigram. 
