@@ -10,8 +10,11 @@ import re
 import numpy as np
 from numpy.testing._private.utils import measure
 import tensorflow as tf
+from tensorflow.python.ops import ragged
+from tensorflow.python.ops.gen_array_ops import shape
 import tensorflow_text as tf_text
 import Vectoriser
+from pathlib import Path
 
 class ChatReader:
     
@@ -33,8 +36,10 @@ class ChatReader:
         flagSetContactS = False
         # rcvrPktCntr = 0
         # sdrPktCntr = 0
-        receiverPackets = np.empty(shape=(pktNumberR, pktSizeR), dtype="U100") #NEXT STEP: ADD A DIMENSION TO THESE TO PREVENT ARRAY ELEMENT AS SEQUENCE ERROR AND READJUST DATA FORMATTING
-        senderPackets = np.empty(shape=(pktNumberS, pktSizeS), dtype="U100")
+        receiverPackets = np.ndarray(shape=(pktNumberR, pktSizeR), dtype="U100") #NEXT STEP: ADD A DIMENSION TO THESE TO PREVENT ARRAY ELEMENT AS SEQUENCE ERROR AND READJUST DATA FORMATTING
+        senderPackets = np.ndarray(shape=(pktNumberS, pktSizeS), dtype="U100")
+        path = Path("C:/Users/jhyan_8hz0dhz/OneDrive/Documents/AI Projects/PersonaAI/DataStorage/")
+
         pattern_time_24hr = ",? (0?[0-9]|1[0-9]|2[0-3]):([0-5][0-9])(:[0-5][0-9])?"
         pattern_time_12hr = (",? (0?[0-9]|1[0-2]):([0-9]|[0-5][0-9])(:[0-5][0-9])? [APap][Mm]")
         pattern_date_US = ("(0?[1-9]|1[0-2])[/.-](0?[1-9]|[12][0-9]|3[01])[/.-](\d{2}|\d{4}),? ")
@@ -163,19 +168,42 @@ class ChatReader:
             last_message_end_idx = m.end()
         
         # Vectorizing
-        senderPackets = Vectoriser.bigramTokenize(Vectoriser.tokenize(senderPackets))
-        receiverPackets = Vectoriser.bigramTokenize(Vectoriser.tokenize(receiverPackets))
+        #senderPackets = Vectoriser.bigramTokenize(Vectoriser.oldtokenize(senderPackets)) #DEBUGGING
+        #receiverPackets = Vectoriser.bigramTokenize(Vectoriser.oldtokenize(receiverPackets)) #DEBUGGING
 
-        #print(senderPackets)
-        print(Vectoriser.tokenize(senderPackets)) #DEBUGGING
-        print("\n\n\n########################break########################\n\n\n") #DEBUGGING
-        #print(receiverPackets)
-        print(Vectoriser.tokenize(receiverPackets)) #DEBUGGING
+        #print(Vectoriser.tokenize(senderPackets)) #DEBUGGING
+        #print(senderPackets.shape)
+        #print(Vectoriser.tokenize(receiverPackets)) #DEBUGGING
+        #print(receiverPackets.shape)
 
-        return np.asarray(senderPackets, dtype=np.dtype("U100")), np.asarray(receiverPackets, dtype=np.dtype("U100"))
+        #senderPackets = tf.RaggedTensor.from_uniform_row_length(senderPackets, pktSizeS)
+        #receiverPackets = tf.RaggedTensor.from_uniform_row_length(tf.ragged.constant(Vectoriser.lemmatize(Vectoriser.tokenize(receiverPackets))), pktSizeR)
+
+        senderPackets = tf.ragged.constant( Vectoriser.lemmatize(Vectoriser.tokenize(senderPackets)) )
+        receiverPackets = tf.ragged.constant( Vectoriser.lemmatize(Vectoriser.tokenize(receiverPackets)) )
+
+        senderPackets = Vectoriser.bigramTokenize(tf.RaggedTensor.from_uniform_row_length(senderPackets, pktSizeS))
+        receiverPackets = Vectoriser.bigramTokenize(tf.RaggedTensor.from_uniform_row_length(receiverPackets, pktSizeR))
+
+        Vectoriser.getVocabulary(senderPackets, receiverPackets)
+        
+        print((np.load(path/"vocabulary.npy", allow_pickle=True)).tolist())
+
+        print("\n\n\n########################break1########################\n\n\n") #DEBUGGING
+
+        print(senderPackets)
+        print("\n\n\n########################break2########################\n\n\n") #DEBUGGING
+        print(receiverPackets)
+        #print(receiverPackets[29, 0, 0:10])
+
+        return senderPackets, receiverPackets #np.asarray(senderPackets, dtype=np.dtype("U100")), np.asarray(receiverPackets, dtype=np.dtype("U100"))
 
 obj = ChatReader() #DEBUGGING
 (obj.chatCrawler(obj.chat)) #DEBUGGING
 
 #TODO make a dictionary for bag of words but don't use just words and counts; use tf-idf weightings and the "words" must be bigram tokens.
+#tf-idf must be for whole dataset - use to assign importance values corresponding to each bigram token/key 
+#and use to exclude certain extremely unimportant bigrams from training
+#bag of words must be vector input to NN and have tf-idf as values instead of pure counts
 #Create a dictionary generation algorithm to automatically generate one for a given chat with each new bigram. 
+#transformer
